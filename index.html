@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UK Food Hygiene Risk Over Time</title>
+
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7f8; }
+    .wrap { max-width: 1100px; margin: 18px auto; padding: 14px; }
+    h1 { margin: 6px 0 10px; font-size: 20px; }
+    .panel { background:#fff; border:1px solid #e6e6e6; border-radius: 12px; padding: 12px; }
+
+    #mapBox{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1210 / 1608;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e6e6e6;
+    }
+    object#mapObj{ width: 100%; height: 100%; display:block; }
+
+    /* Labels */
+    .label{
+      position:absolute;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(0,0,0,0.14);
+      font-size: 12px;
+      font-weight: 650;
+      user-select: none;
+      backdrop-filter: blur(4px);
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+      cursor: default;
+    }
+    .label.big{
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 6px 10px;
+    }
+    .label.small{
+      font-size: 11px;
+      font-weight: 650;
+      opacity: 0.86;
+      padding: 3px 7px;
+    }
+
+    /* BRIGHTER pulse */
+    .dot{
+      position:absolute;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+
+      background: rgba(255, 0, 0, 0.75);
+      border: 2px solid rgba(120, 0, 0, 0.45);
+
+      box-shadow: 0 0 22px rgba(255,0,0,0.70);
+      animation: pulse 1.05s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(255,0,0,0.75), 0 0 22px rgba(255,0,0,0.70); transform: translate(-50%, -50%) scale(1); }
+      65%  { box-shadow: 0 0 0 34px rgba(255,0,0,0),    0 0 30px rgba(255,0,0,0.35); transform: translate(-50%, -50%) scale(1.08); }
+      100% { box-shadow: 0 0 0 0 rgba(255,0,0,0),       0 0 22px rgba(255,0,0,0.35); transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* Tooltip */
+    #tip{
+      position: fixed;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(20,20,20,0.92);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.3;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(10px, 10px);
+      max-width: 360px;
+      white-space: pre-line;
+    }
+
+    .controls{ display:flex; gap:10px; align-items:center; margin-top: 10px; flex-wrap: wrap; }
+    .pill{ background:#fff; border:1px solid #e6e6e6; border-radius: 999px; padding: 8px 12px; }
+    input[type="range"]{ width: 260px; }
+    #yearText{ font-weight: 900; }
+    button{
+      border:1px solid #e6e6e6;
+      background:#fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor:pointer;
+      font-weight: 650;
+    }
+    .muted{ color:#666; font-size: 12px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>UK Food Hygiene Risk Over Time</h1>
+
+      <div id="mapBox">
+        <object id="mapObj" type="image/svg+xml" data="uk_basemap.svg"></object>
+
+        <div id="dot-eng" class="dot"></div>
+        <div id="dot-sco" class="dot"></div>
+        <div id="dot-wal" class="dot"></div>
+        <div id="dot-ni"  class="dot"></div>
+
+        <div id="lab-eng" class="label big">ENGLAND</div>
+        <div id="lab-sco" class="label big">SCOTLAND</div>
+        <div id="lab-wal" class="label big">WALES</div>
+        <div id="lab-ni"  class="label big">NORTHERN IRELAND</div>
+
+        <!-- Extra detail labels -->
+        <div class="label small" style="left:70%; top:84%;">London</div>
+        <div class="label small" style="left:61%; top:75%;">Birmingham</div>
+        <div class="label small" style="left:64%; top:68%;">Manchester</div>
+        <div class="label small" style="left:66%; top:64%;">Leeds</div>
+        <div class="label small" style="left:66%; top:60%;">Newcastle</div>
+        <div class="label small" style="left:55%; top:78%;">Cardiff</div>
+        <div class="label small" style="left:63%; top:33%;">Edinburgh</div>
+        <div class="label small" style="left:58%; top:36%;">Glasgow</div>
+        <div class="label small" style="left:34%; top:56%;">Belfast</div>
+        <div class="label small" style="left:50%; top:58%;">Irish Sea</div>
+        <div class="label small" style="left:83%; top:44%;">North Sea</div>
+        <div class="label small" style="left:74%; top:92%;">English Channel</div>
+      </div>
+
+      <div class="controls">
+        <div class="pill">Year: <span id="yearText">2018</span></div>
+        <div class="pill">
+          <input id="yearSlider" type="range" min="2018" max="2023" step="1" value="2018" />
+        </div>
+        <button id="playBtn">Play</button>
+        <div class="muted">Hover the big labels to see the year + values.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tip"></div>
+
+  <script>
+    // ===== DATA (failure rate only for now) =====
+    const dataMap = {
+      England: {
+        2018: { failure_rate: 0.11 }, 2019: { failure_rate: 0.12 }, 2020: { failure_rate: 0.16 },
+        2021: { failure_rate: 0.14 }, 2022: { failure_rate: 0.13 }, 2023: { failure_rate: 0.12 },
+      },
+      Scotland: {
+        2018: { failure_rate: 0.09 }, 2019: { failure_rate: 0.10 }, 2020: { failure_rate: 0.13 },
+        2021: { failure_rate: 0.12 }, 2022: { failure_rate: 0.11 }, 2023: { failure_rate: 0.10 },
+      },
+      Wales: {
+        2018: { failure_rate: 0.13 }, 2019: { failure_rate: 0.14 }, 2020: { failure_rate: 0.18 },
+        2021: { failure_rate: 0.16 }, 2022: { failure_rate: 0.15 }, 2023: { failure_rate: 0.14 },
+      },
+      Northern_Ireland: {
+        2018: { failure_rate: 0.10 }, 2019: { failure_rate: 0.11 }, 2020: { failure_rate: 0.15 },
+        2021: { failure_rate: 0.13 }, 2022: { failure_rate: 0.12 }, 2023: { failure_rate: 0.11 },
+      }
+    };
+
+    // ===== Positions =====
+    const places = {
+      England:          { x: 69, y: 79, labId:"lab-eng", dotId:"dot-eng" },
+      Scotland:         { x: 63, y: 25, labId:"lab-sco", dotId:"dot-sco" },
+      Wales:            { x: 56, y: 74, labId:"lab-wal", dotId:"dot-wal" },
+      Northern_Ireland: { x: 35, y: 55, labId:"lab-ni",  dotId:"dot-ni"  },
+    };
+
+    function applyPositions(){
+      for (const p of Object.values(places)){
+        document.getElementById(p.labId).style.left = p.x + "%";
+        document.getElementById(p.labId).style.top  = p.y + "%";
+        document.getElementById(p.dotId).style.left = p.x + "%";
+        document.getElementById(p.dotId).style.top  = p.y + "%";
+      }
+    }
+    applyPositions();
+
+    // ===== Year state (THIS prevents the “stuck at 2018” problem) =====
+    let currentYear = 2018;
+    const slider = document.getElementById("yearSlider");
+    const yearText = document.getElementById("yearText");
+
+    // ===== Tooltip =====
+    const tip = document.getElementById("tip");
+    function prettyCountry(name){ return name.replace("_"," "); }
+
+    function buildTip(country){
+      const row = dataMap?.[country]?.[currentYear];
+      const fr = row?.failure_rate;
+      const frText = (fr == null) ? "—" : `${(fr*100).toFixed(1)}%`;
+
+      // Scatterplot story reference: (when you add avg_rating + inspections, we’ll show them here too)
+      return [
+        `${prettyCountry(country)}  •  Year: ${currentYear}`,
+        `Failure rate (not meeting standards): ${frText}`,
+        `Average hygiene rating (0–5): —`,
+        `Inspections per 1,000 businesses: —`,
+      ].join("\n");
+    }
+
+    function showTip(text, e){
+      tip.textContent = text;
+      tip.style.left = (e.clientX + 12) + "px";
+      tip.style.top  = (e.clientY + 12) + "px";
+      tip.style.opacity = 1;
+    }
+    function hideTip(){ tip.style.opacity = 0; }
+
+    // Hover on big labels (mouseenter + mousemove)
+    for (const country of ["England","Scotland","Wales","Northern_Ireland"]){
+      const lab = document.getElementById(places[country].labId);
+      lab.addEventListener("mouseenter", (e)=> showTip(buildTip(country), e));
+      lab.addEventListener("mousemove",  (e)=> showTip(buildTip(country), e));
+      lab.addEventListener("mouseleave", hideTip);
+    }
+
+    // ===== Dot sizing by year =====
+    function rateToDotStyle(rate){
+      const min = 0.08, max = 0.20;
+      const t = Math.max(0, Math.min(1, (rate - min) / (max - min)));
+      const size = 16 + t * 30;      // bigger range
+      const alpha = 0.55 + t * 0.35; // brighter
+      return { size, alpha };
+    }
+
+    function updateYearUI(year){
+      currentYear = year;                 // <-- THIS is the key fix
+      yearText.textContent = year;
+
+      for (const country of Object.keys(places)){
+        const dot = document.getElementById(places[country].dotId);
+        const rate = dataMap?.[country]?.[year]?.failure_rate;
+
+        if (rate == null){
+          dot.style.width = "16px";
+          dot.style.height = "16px";
+          dot.style.background = "rgba(255,0,0,0.35)";
+        } else {
+          const { size, alpha } = rateToDotStyle(rate);
+          dot.style.width = size + "px";
+          dot.style.height = size + "px";
+          dot.style.background = `rgba(255, 0, 0, ${alpha})`;
+        }
+      }
+    }
+
+    slider.addEventListener("input", ()=> updateYearUI(+slider.value));
+
+    // Play/Pause
+    let timer = null;
+    const playBtn = document.getElementById("playBtn");
+    playBtn.addEventListener("click", ()=>{
+      if (timer){
+        clearInterval(timer);
+        timer = null;
+        playBtn.textContent = "Play";
+        return;
+      }
+      playBtn.textContent = "Pause";
+      timer = setInterval(()=>{
+        let y = +slider.value;
+        y = (y >= +slider.max) ? +slider.min : (y + 1);
+        slider.value = y;
+        updateYearUI(y);
+      }, 1000);
+    });
+
+    // Init
+    updateYearUI(+slider.value);
+  </script>
+</body>
+</html>
